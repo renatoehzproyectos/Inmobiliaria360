@@ -98,7 +98,7 @@ function invite(f){if(role(S.cal)!=='admin')return toast('Solo administradores',
  if(db.members.some(m=>m.cal===S.cal&&m.email===e))return toast('Ya es miembro',1);db.invites=db.invites.filter(i=>!(i.cal===S.cal&&i.email===e&&i.status==='pendiente'));
  db.invites.push({id:uid(),cal:S.cal,email:e,role:f.role.value,by:db.session,status:'pendiente',token:uid()+uid(),exp:Date.now()+7*864e5});save();render();toast('Invitación creada (7 días de vigencia)')}
 function accept(id){const i=db.invites.find(x=>x.id===id);if(!i||i.email!==db.session||i.status!=='pendiente'||i.exp<Date.now())return toast('Invitación no válida o vencida',1);i.status='aceptada';db.members.push({cal:i.cal,email:i.email,role:i.role});save();S.cal=i.cal;render();toast('Ya formas parte del calendario')}
-const setRole=(e,r)=>{if(role(S.cal)!=='admin')return;db.members.find(m=>m.cal===S.cal&&m.email===e).role=r;save();render()};
+var setRole=(e,r)=>{if(role(S.cal)!=='admin')return;db.members.find(m=>m.cal===S.cal&&m.email===e).role=r;save();render()};
 function rmMember(e){const k=db.cals.find(c=>c.id===S.cal);if(role(S.cal)!=='admin'||e===k.owner)return toast('No se puede retirar al propietario',1);db.members=db.members.filter(m=>!(m.cal===S.cal&&m.email===e));save();render()}
 function revoke(id){db.invites.find(i=>i.id===id).status='revocada';save();render()}
 // --- render
@@ -186,11 +186,11 @@ login=async f=>{const r=await SB.auth.signInWithPassword({email:f.email.value.tr
 register=async f=>{const r=await SB.auth.signUp({email:f.email.value.trim(),password:f.pw.value,options:{data:{name:f.name.value.trim()},emailRedirectTo:location.origin+location.pathname}});toast(r.error?r.error.message:'Te enviamos un correo para verificar tu cuenta',!!r.error)};
 logout=()=>SB.auth.signOut();
 forgot=async()=>{const e=prompt('Tu correo');if(!e)return;const r=await SB.auth.resetPasswordForEmail(e.trim(),{redirectTo:location.origin+location.pathname});toast(r.error?r.error.message:'Si el correo existe, recibirás un enlace',!!r.error)};
-SB.auth.onAuthStateChange(ev=>{if(ev==='TOKEN_REFRESHED')return;setTimeout(async()=>{
+SB.auth.onAuthStateChange(ev=>{if(ev==='TOKEN_REFRESHED')return;setTimeout(async()=>{try{
  if(ev==='PASSWORD_RECOVERY'){const p=prompt('Nueva contraseña (6+ caracteres)');if(p){const r=await SB.auth.updateUser({password:p});toast(r.error?r.error.message:'Contraseña actualizada',!!r.error)}}
  await sync();
  if(db.session&&TK){const t=TK;TK=null;const r=await SB.rpc('accept_invitation',{p_token:t});if(r.error)toast(r.error.message,1);else{await sync();S.cal=r.data;toast('Ya formas parte del calendario')}}
- if(!S.modal||!db.session)render()},0)});
+ if(!S.modal||!db.session)render()}catch(x){document.getElementById('app').innerHTML='<pre style="padding:1rem;white-space:pre-wrap">Error al iniciar: '+esc(x.message||x)+'</pre>'}},0)});
 let tm;SB.channel('o360').on('postgres_changes',{event:'*',schema:'public'},()=>{clearTimeout(tm);tm=setTimeout(async()=>{await sync();if(!S.modal)render()},400)}).subscribe();
 }
 

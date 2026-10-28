@@ -1,1 +1,1 @@
-window.OBRA_CFG={url:"https://ohwferyemggsjeghvtgy.supabase.co",anon:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzZWtsZnl0cGdmaWpxd2Zxa2FiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMxMzA3NTksImV4cCI6MjEwODcwNjc1OX0.IHtXhGcdXy_gF2LxCUaFFFOgLNUbmXEBYVyk9hEgD7w"};
+window.OBRA_CFG={url:"",anon:""}; // pega aquí la URL y la clave anon de Supabase (ver README)
