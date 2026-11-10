@@ -12,7 +12,7 @@ create function has_role(c uuid,r text[]) returns boolean language sql stable se
 $$select exists(select 1 from calendar_members where calendar_id=c and user_id=auth.uid() and role=any(r))$$;
 
 create function handle_new_user() returns trigger language plpgsql security definer set search_path=public as $$
-begin insert into profiles values(new.id,lower(new.email),coalesce(new.raw_user_meta_data->>'name',new.email));
+begin insert into profiles values(new.id,lower(new.email),coalesce(new.raw_user_meta_data->>'name',new.raw_user_meta_data->>'full_name',new.email));
 insert into calendars(name,type,owner_id) values('Personal','personal',new.id);return new;end$$;
 create trigger on_auth_user after insert on auth.users for each row execute function handle_new_user();
 

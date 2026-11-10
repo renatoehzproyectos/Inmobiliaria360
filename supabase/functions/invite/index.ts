@@ -10,7 +10,8 @@ Deno.serve(async req=>{
     const asUser=createClient(url,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:req.headers.get('Authorization')??''}}})
     const {data:{user}}=await asUser.auth.getUser()
     if(!user)return out({error:'No autenticado'},401)
-    const {calendar_id,email:raw,role}=await req.json()
+    const {calendar_id,email:raw,role,google_token}=await req.json()
+    if(!google_token)return out({error:'Falta autorización de Google',code:'google_auth'},401)
     const email=String(raw).trim().toLowerCase()
     if(!/^\S+@\S+\.\S+$/.test(email)||!['admin','editor','lector'].includes(role))return out({error:'Datos no válidos'},400)
     const {data:mem}=await asUser.from('calendar_members').select('role').eq('calendar_id',calendar_id).eq('user_id',user.id).maybeSingle()
@@ -26,10 +27,16 @@ Deno.serve(async req=>{
     if(error)return out({error:error.message},500)
     const link=`${Deno.env.get('APP_URL')}#invite=${token}`
     const names:Record<string,string>={admin:'Administrador',editor:'Editor',lector:'Lector'}
-    const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${Deno.env.get('RESEND_API_KEY')}`,'Content-Type':'application/json'},
-      body:JSON.stringify({from:Deno.env.get('FROM_EMAIL'),to:email,subject:`${user.email} te invitó a «${cal.name}» en OBRA360`,
-      html:`<p><b>${esc(user.email??'')}</b> te invitó al calendario <b>${esc(cal.name)}</b> con el rol <b>${names[role]}</b>.</p><p><a href="${link}">Aceptar invitación</a></p><p>El enlace vence en 7 días. Debes entrar con este mismo correo (${esc(email)}).</p>`})})
-    if(!r.ok){await db.from('calendar_invitations').delete().eq('id',inv.id);return out({error:'El proveedor de correo rechazó el envío'},502)}
+    const subject=`${user.email} te invitó a «${cal.name}» en OBRA360`
+    const html=`<p><b>${esc(user.email??'')}</b> te invitó al calendario <b>${esc(cal.name)}</b> con el rol <b>${names[role]}</b>.</p><p><a href="${link}">Aceptar invitación</a></p><p>El enlace vence en 7 días. Debes entrar con este mismo correo (${esc(email)}).</p>`
+    const b64=(s:string)=>{let r='';for(const b of new TextEncoder().encode(s))r+=String.fromCharCode(b);return btoa(r)}
+    const mime=[`To: ${email}`,`Subject: =?UTF-8?B?${b64(subject)}?=`,'MIME-Version: 1.0','Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',b64(html)].join('\r\n')
+    const raw64=b64(mime).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')
+    // Se envía desde el Gmail del usuario que invita (el From lo pone Gmail)
+    const r=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:`Bearer ${google_token}`,'Content-Type':'application/json'},body:JSON.stringify({raw:raw64})})
+    if(!r.ok){await db.from('calendar_invitations').delete().eq('id',inv.id)
+      if(r.status===401||r.status===403)return out({error:'Google rechazó el permiso para enviar correo. Vuelve a iniciar sesión con Google.',code:'google_auth'},401)
+      return out({error:'Gmail rechazó el envío'},502)}
     return out({ok:true})
   }catch(e){return out({error:String(e)},500)}
 })
