@@ -130,7 +130,7 @@ function side(){const k=db.cals.find(c=>c.id===S.cal);const inv=db.invites.filte
 function app(){const u=me();
  if(!u)return`<div class="auth wrap"><div class="logo" style="text-align:center;font-size:2.2rem">OBRA<b>360</b></div><p class="mut" style="text-align:center">Postventa de obras, sin llamadas de por medio.</p><div class="card">${window.OBRA_CFG&&OBRA_CFG.url?`<h2>Iniciar sesión</h2><p class="mut">Entra o crea tu cuenta con Google. Las invitaciones se enviarán desde tu correo.</p><button class="btn solid" style="width:100%;margin-top:.6rem" onclick="google()">Continuar con Google</button>`:`<form onsubmit="login(this);return false"><h2>Iniciar sesión</h2><input name="email" type="email" placeholder="Correo" required><input name="pw" type="password" placeholder="Contraseña" required><button class="btn solid" style="width:100%;margin-top:.6rem">Entrar</button></form><hr style="border:0;border-top:1px solid var(--line);margin:1.2rem 0"><form onsubmit="register(this);return false"><h3>Crear cuenta</h3><input name="name" placeholder="Nombre"><input name="email" type="email" placeholder="Correo" required><input name="pw" type="password" placeholder="Contraseña (6+ caracteres)" required><button class="btn out" style="width:100%;margin-top:.6rem">Registrarme</button></form><p class="mut">Demo: ana@obra360.cl o marco@obra360.cl, contraseña demo123.</p>`}</div></div>`;
  const cs=myCals();if(!cs.some(c=>c.id===S.cal))S.cal=cs[0].id;const k=db.cals.find(c=>c.id===S.cal),title={month:fmt(S.d,{month:'long',year:'numeric'}),week:'Semana del '+fmt(S.d,{day:'numeric',month:'long'}),day:fmt(S.d,{weekday:'long',day:'numeric',month:'long'}),agenda:'Agenda'}[S.view];
- return`<header><div class="wrap"><span class="logo">OBRA<b>360</b></span><span><span class="mut">${esc(u.name)}</span> <button class="btn out" onclick="logout()">Salir</button></span></div></header><div class="bar"><div class="wrap">Estás en: <b>${k.type==='personal'?'Calendario personal (privado)':'Calendario compartido · '+esc(k.name)}</b></div></div>
+ return`<header><div class="wrap"><span class="logo">OBRA<b>360</b></span><span>${accUI(u)} <button class="btn out" onclick="logout()">Salir</button></span></div></header><div class="bar"><div class="wrap">Estás en: <b>${k.type==='personal'?'Calendario personal (privado)':'Calendario compartido · '+esc(k.name)}</b></div></div>
  <div class="wrap"><div class="tabs">${cs.map(c=>`<button class="tab ${c.id===S.cal?'on':''}" onclick="S.cal='${c.id}';render()">${c.type==='personal'?'Personal':esc(c.name)}</button>`).join('')}</div>
  <div class="tools"><button class="btn out" onclick="nav(-1)" aria-label="Anterior">‹</button><button class="btn out" onclick="nav(0)">Hoy</button><button class="btn out" onclick="nav(1)" aria-label="Siguiente">›</button><h2 style="font-size:1.4rem;text-transform:capitalize">${title}</h2><span class="sp"></span>
  <select onchange="S.view=this.value;render()" aria-label="Vista">${[['month','Mes'],['week','Semana'],['day','Día'],['agenda','Agenda']].map(([v,l])=>`<option value="${v}" ${v===S.view?'selected':''}>${l}</option>`).join('')}</select>
@@ -154,6 +154,7 @@ function openShare(id){const ds=myCals().filter(c=>c.type==='shared'&&canAdd(c.i
  <label class="w"><input type="radio" name="mode" value="move" checked style="width:auto"> <b>Mover</b>: sale de tu calendario personal y pasa al compartido.</label><label class="w"><input type="radio" name="mode" value="copy" style="width:auto"> <b>Copiar</b>: el original sigue privado; la copia es independiente.</label></div>
  <div class="acts"><button type="button" class="btn out" onclick="S.modal=null;render()">Cancelar</button><button class="btn solid">Confirmar</button></div></form></div>`;render()}
 let e0;
+window.accUI=u=>`<span class="mut">${esc(u.name)}</span>`;
 if(!(window.OBRA_CFG&&OBRA_CFG.url)){render()}else{
 db={session:null,users:[],cals:[],members:[],invites:[],events:[]};
 const SB=supabase.createClient(OBRA_CFG.url,OBRA_CFG.anon);let UID,P={},TK=(location.hash.match(/invite=([0-9a-f]+)/)||[])[1];
@@ -190,8 +191,18 @@ accept=id=>go(SB.rpc('accept_invitation',{p_id:id}),'Ya formas parte del calenda
 setRole=(e,r)=>go(SB.from('calendar_members').update({role:r}).eq('calendar_id',S.cal).eq('user_id',uidOf(e)));
 rmMember=e=>confirm('¿Retirar a este miembro? Perderá el acceso.')&&go(SB.from('calendar_members').delete().eq('calendar_id',S.cal).eq('user_id',uidOf(e)),'Acceso revocado');
 revoke=id=>go(SB.from('calendar_invitations').update({status:'revocada'}).eq('id',id));
-logout=()=>{sessionStorage.removeItem('o360_gt');SB.auth.signOut()};
-SB.auth.onAuthStateChange((ev,ses)=>{if(ev==='TOKEN_REFRESHED')return;if(ses&&ses.provider_token)sessionStorage.setItem('o360_gt',ses.provider_token);setTimeout(async()=>{try{
+const ACC='o360_accts';
+const accts=()=>{try{return JSON.parse(localStorage.getItem(ACC)||'{}')}catch(e){return{}}};
+const putAccts=o=>{try{localStorage.setItem(ACC,JSON.stringify(o))}catch(e){}};
+const saveAcc=ses=>{if(!ses||!ses.user||!ses.user.email)return;const a=accts(),e=ses.user.email.toLowerCase(),old=a[e]||{},m=ses.user.user_metadata||{};a[e]={name:m.full_name||m.name||e,access_token:ses.access_token,refresh_token:ses.refresh_token,gt:ses.provider_token||old.gt||''};putAccts(a)};
+accUI=u=>{const o=accts(),ks=Object.keys(o);if(!ks.includes(u.email))ks.unshift(u.email);return`<select onchange="swAcc(this.value)" aria-label="Cuenta" style="max-width:52vw">${ks.map(k=>`<option value="${esc(k)}" ${k===u.email?'selected':''}>${esc(o[k]&&o[k].name&&o[k].name!==k?o[k].name+' · '+k:k)}</option>`).join('')}<option value="__add">＋ Agregar otra cuenta</option></select>`};
+swAcc=async v=>{if(v==='__add')return google();const a=accts()[v];if(!a)return;
+ const r=await SB.auth.setSession({access_token:a.access_token,refresh_token:a.refresh_token});
+ if(r.error){const o=accts();delete o[v];putAccts(o);render();return toast('Esa sesión venció. Agrégala de nuevo con Google.',1)}
+ if(a.gt)sessionStorage.setItem('o360_gt',a.gt);else sessionStorage.removeItem('o360_gt');
+ S.cal=null;await sync();render()};
+logout=async()=>{const o=accts();delete o[db.session];putAccts(o);sessionStorage.removeItem('o360_gt');const rest=Object.keys(o);if(rest.length)return swAcc(rest[0]);SB.auth.signOut()};
+SB.auth.onAuthStateChange((ev,ses)=>{if(ses)saveAcc(ses);if(ev==='TOKEN_REFRESHED')return;if(ses&&ses.provider_token)sessionStorage.setItem('o360_gt',ses.provider_token);setTimeout(async()=>{try{
   await sync();
  if(db.session&&TK){const t=TK;TK=null;const r=await SB.rpc('accept_invitation',{p_token:t});if(r.error)toast(r.error.message,1);else{await sync();S.cal=r.data;toast('Ya formas parte del calendario')}}
  if(!S.modal||!db.session)render()}catch(x){document.getElementById('app').innerHTML='<pre style="padding:1rem;white-space:pre-wrap">Error al iniciar: '+esc(x.message||x)+'</pre>'}},0)});
