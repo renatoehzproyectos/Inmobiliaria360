@@ -2,6 +2,10 @@
 <html lang="es"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>OBRA360 | Postventa</title>
+<meta name="description" content="OBRA360: calendarios personales y compartidos para la postventa de obras, con roles e invitaciones por correo.">
+<meta name="theme-color" content="#7b9933"><meta name="robots" content="index,follow">
+<meta property="og:title" content="OBRA360 | Postventa"><meta property="og:description" content="Calendarios compartidos para la postventa de obras."><meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%237b9933'/%3E%3Ctext x='16' y='22' font-size='16' font-weight='800' text-anchor='middle' fill='white' font-family='Arial'%3E360%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{--green:#7b9933;--gd:#5E752B;--gdeep:#3f5220;--gl:#97b332;--gp:#eef3e0;--or:#ff6900;--ord:#d95500;--ink:#121212;--soft:#3c3c3c;--paper:#fcfbf8;--p2:#f4f2ec;--line:#e2ded4;--card:#fff;--red:#b3261e;
@@ -55,7 +59,7 @@ input,select,textarea{border:1.5px solid var(--line);border-radius:12px;padding:
 .mut{color:var(--soft);font-size:.84rem}.acts{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;margin-top:1rem}
 .inv{background:var(--gp);border-radius:12px;padding:.7rem;margin-bottom:.7rem;font-size:.86rem}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
-</style><script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script></head><body><div id="app"></div>
+</style><script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script></head><body><div id="app"></div>
 <script>
 const K='obra360-v1',ROLES={admin:'Administrador',editor:'Editor',lector:'Lector'},ST=['pendiente','confirmado','en curso','completado','cancelado'],TY=['Visita técnica','Reparación','Inspección','Reunión','Otro'];
 const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36);

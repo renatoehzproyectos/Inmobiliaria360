@@ -18,6 +18,9 @@ Deno.serve(async req=>{
     const {data:cal}=await asUser.from('calendars').select('name,type').eq('id',calendar_id).maybeSingle()
     if(!cal||cal.type!=='shared'||mem?.role!=='admin')return out({error:'Solo los administradores pueden invitar'},403)
     const db=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+    // Límite: máx. 20 invitaciones por hora por usuario
+    const {count}=await db.from('calendar_invitations').select('id',{count:'exact',head:true}).eq('invited_by',user.id).gte('created_at',new Date(Date.now()-36e5).toISOString())
+    if((count??0)>=20)return out({error:'Demasiadas invitaciones en poco tiempo. Intenta más tarde.'},429)
     const {data:p}=await db.from('profiles').select('id').eq('email',email).maybeSingle()
     if(p){const {data:m}=await db.from('calendar_members').select('user_id').eq('calendar_id',calendar_id).eq('user_id',p.id).maybeSingle();if(m)return out({error:'Esa persona ya es miembro'},409)}
     const token=hex(crypto.getRandomValues(new Uint8Array(32)))
